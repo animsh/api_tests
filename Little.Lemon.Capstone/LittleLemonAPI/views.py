@@ -1,421 +1,184 @@
 from rest_framework import generics
-from .models import Category, MenuItem, Cart, Order, OrderItem
-from .serializers import CategorySerializer, MenuItemSerializer, CartSerializer, OrderSerializer, OrderItemSerializer, ManagerListSerializer
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsSuperuser, IsManager, IsDeliveryCrew, IsCustomer
-from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, get_object_or_404
+from .models import Category, MenuItem, Cart, Order, OrderItem
+from .serializers import CategorySerializer, MenuItemSerializer, CartSerializer, OrderSerializer, UserSerilializer
 from rest_framework.response import Response
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
-from django.contrib.auth.models import User, Group
-from django.http import JsonResponse
+
+from rest_framework.permissions import IsAdminUser
+from django.shortcuts import get_object_or_404
+
+from django.contrib.auth.models import Group, User
+
+from rest_framework import viewsets
+from rest_framework import status
 
 
-class CategoryView(ListCreateAPIView, RetrieveUpdateDestroyAPIView):
+class CategoriesView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    authentication_classes = [TokenAuthentication]
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
 
-    def list(self, request, *args, **kwargs):
-        categories = self.get_queryset()
-        serializer = self.get_serializer(categories, many=True)
-        return Response({
-            'message': 'Categories retrieved successfully.',
-            'data': serializer.data
-        })
+    def get_permissions(self):
+        permission_classes = []
+        if self.request.method != 'GET':
+            permission_classes = [IsAuthenticated]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Category created successfully.',
-            'data': serializer.data
-        }, status=status.HTTP_201_CREATED)
-
-    def retrieve(self, request, *args, **kwargs):
-        category = self.get_object()
-        serializer = self.get_serializer(category)
-        return Response({
-            'message': 'Category retrieved successfully.',
-            'data': serializer.data
-        })
-
-    def update(self, request, *args, **kwargs):
-        category = self.get_object()
-        serializer = self.get_serializer(category, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Category updated successfully.',
-            'data': serializer.data
-        })
-
-    def destroy(self, request, *args, **kwargs):
-        category = self.get_object()
-        category.delete()
-        return Response({
-            'message': 'Category deleted successfully.'
-        })
+        return [permission() for permission in permission_classes]
 
 
-class SingleCategoryView(RetrieveUpdateDestroyAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-
-    def list(self, request, *args, **kwargs):
-        category = self.get_queryset()
-        serializer = self.get_serializer(category)
-        return Response({
-            'message': 'Category retrieved successfully.',
-            'data': serializer.data
-        })
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Category created successfully.',
-            'data': serializer.data
-        }, status=status.HTTP_201_CREATED)
-
-    def retrieve(self, request, *args, **kwargs):
-        category = self.get_object()
-        serializer = self.get_serializer(category)
-        return Response({
-            'message': 'Category retrieved successfully.',
-            'data': serializer.data
-        })
-
-    def update(self, request, *args, **kwargs):
-        category = self.get_object()
-        serializer = self.get_serializer(category, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Category updated successfully.',
-            'data': serializer.data
-        })
-
-    def destroy(self, request, *args, **kwargs):
-        category = self.get_object()
-        category.delete()
-        return Response({
-            'message': 'Category deleted successfully.'
-        })
-
-
-class MenuItemView(generics.ListCreateAPIView):
+class MenuItemsView(generics.ListCreateAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
-    ordering_fields = ['price']
-    filterset_fields = ['price']
-    search_fields = ['title']
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    search_fields = ['category__title']
+    ordering_fields = ['price', 'inventory']
+
+    def get_permissions(self):
+        permission_classes = []
+        if self.request.method != 'GET':
+            permission_classes = [IsAuthenticated]
+
+        return [permission() for permission in permission_classes]
 
 
 class SingleMenuItemView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
 
-    def list(self, request, *args, **kwargs):
-        data = self.get_queryset()
-        serializer = self.get_serializer(data)
-        return Response({
-            'message': 'Menu item retrieved successfully.',
-            'data': serializer.data
-        })
+    def get_permissions(self):
+        permission_classes = []
+        if self.request.method != 'GET':
+            permission_classes = [IsAuthenticated]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Menu item created successfully.',
-            'data': serializer.data
-        }, status=status.HTTP_201_CREATED)
-
-    def retrieve(self, request, *args, **kwargs):
-        data = self.get_object()
-        serializer = self.get_serializer(data)
-        return Response({
-            'message': 'Menu item retrieved successfully.',
-            'data': serializer.data
-        })
-
-    def update(self, request, *args, **kwargs):
-        data = self.get_object()
-        serializer = self.get_serializer(data, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Menu item updated successfully.',
-            'data': serializer.data
-        })
-
-    def destroy(self, request, *args, **kwargs):
-        data = self.get_object()
-        data.delete()
-        return Response({
-            'message': 'Menu item deleted successfully.'
-        })
+        return [permission() for permission in permission_classes]
 
 
-class CartView(generics.ListCreateAPIView, generics.RetrieveUpdateDestroyAPIView):
-    # queryset = Cart.objects.all()
+class CartView(generics.ListCreateAPIView):
+    queryset = Cart.objects.all()
     serializer_class = CartSerializer
-    authentication_classes = [TokenAuthentication]
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-
-    def get_object(self):
-        queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, user=self.request.user)
-        self.check_object_permissions(self.request, obj)
-        return obj
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Cart.objects.filter(user=self.request.user)
+        return Cart.objects.all().filter(user=self.request.user)
 
-    def create(self, request, *args, **kwargs):
-        request.data['user'] = request.user.id
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response({
-            'message': 'Cart created successfully.',
-            'data': serializer.data
-        })
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        if self.get_object().user != request.user:
-            return Response({'message': 'You do not have permission to perform this action.'}, status=403)
-        return Response({
-            'message': 'Cart retrieved successfully.',
-            'data': serializer.data
-        })
-
-    def update(self, request, *args, **kwargs):
-        obj = self.get_object()
-        serializer = self.get_serializer(obj, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response({
-            'message': 'Cart updated successfully.',
-            'data': serializer.data
-        })
-
-    def destroy(self, request, *args, **kwargs):
-        obj = self.get_queryset()
-        if obj.first().user != request.user:
-            return Response({'message': 'You do not have permission to perform this action.'}, status=403)
-        obj.delete()
-        return Response({'message': 'Cart deleted successfully.'})
+    def delete(self, request, *args, **kwargs):
+        Cart.objects.all().filter(user=self.request.user).delete()
+        return Response("ok")
 
 
 class OrderView(generics.ListCreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    search_fields = ['user']
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    permission_classes = [IsAuthenticated]
 
-    def list(self, request, *args, **kwargs):
-        data = self.get_queryset()
-        serializer = self.get_serializer(data, many=True)
-        return Response({
-            'message': 'Orders retrieved successfully.',
-            'data': serializer.data
-        })
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return Order.objects.all()
+        elif self.request.user.groups.count() == 0:  # normal customer - no group
+            return Order.objects.all().filter(user=self.request.user)
+        # delivery crew
+        elif self.request.user.groups.filter(name='Delivery Crew').exists():
+            # only show oreders assigned to him
+            return Order.objects.all().filter(delivery_crew=self.request.user)
+        else:  # delivery crew or manager
+            return Order.objects.all()
+        # else:
+        #     return Order.objects.all()
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Order created successfully.',
-            'data': serializer.data
-        }, status=status.HTTP_201_CREATED)
+        menuitem_count = Cart.objects.all().filter(user=self.request.user).count()
+        if menuitem_count == 0:
+            return Response({"message:": "no item in cart"})
 
-    def retrieve(self, request, *args, **kwargs):
-        data = self.get_object()
-        serializer = self.get_serializer(data)
-        return Response({
-            'message': 'Order retrieved successfully.',
-            'data': serializer.data
-        })
+        data = request.data.copy()
+        total = self.get_total_price(self.request.user)
+        data['total'] = total
+        data['user'] = self.request.user.id
+        order_serializer = OrderSerializer(data=data)
+        if (order_serializer.is_valid()):
+            order = order_serializer.save()
 
-    def update(self, request, *args, **kwargs):
-        order = self.get_object()
-        serializer = self.get_serializer(
-            order, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Order updated successfully.',
-            'data': serializer.data
-        })
+            items = Cart.objects.all().filter(user=self.request.user).all()
 
-    def destroy(self, request, *args, **kwargs):
-        data = self.get_object()
-        data.delete()
-        return Response({
-            'message': 'Order deleted successfully.'
-        })
+            for item in items.values():
+                orderitem = OrderItem(
+                    order=order,
+                    menuitem_id=item['menuitem_id'],
+                    price=item['price'],
+                    quantity=item['quantity'],
+                )
+                orderitem.save()
+
+            Cart.objects.all().filter(user=self.request.user).delete()  # Delete cart items
+
+            result = order_serializer.data.copy()
+            result['total'] = total
+            return Response(order_serializer.data)
+
+    def get_total_price(self, user):
+        total = 0
+        items = Cart.objects.all().filter(user=user).all()
+        for item in items.values():
+            total += item['price']
+        return total
 
 
-class SingleOrderView(generics.RetrieveUpdateDestroyAPIView):
+class SingleOrderView(generics.RetrieveUpdateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-
-    def list(self, request, *args, **kwargs):
-        data = self.get_queryset()
-        serializer = self.get_serializer(data, many=True)
-        return Response({
-            'message': 'Orders retrieved successfully.',
-            'data': serializer.data
-        })
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Order created successfully.',
-            'data': serializer.data
-        }, status=status.HTTP_201_CREATED)
-
-    def retrieve(self, request, *args, **kwargs):
-        data = self.get_object()
-        serializer = self.get_serializer(data)
-        return Response({
-            'message': 'Order retrieved successfully.',
-            'data': serializer.data
-        })
+    permission_classes = [IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
-        order = self.get_object()
-        serializer = self.get_serializer(
-            order, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({
-            'message': 'Order updated successfully.',
-            'data': serializer.data
-        })
-
-    def destroy(self, request, *args, **kwargs):
-        data = self.get_object()
-        data.delete()
-        return Response({
-            'message': 'Order deleted successfully.'
-        })
-# class OrderItemView(generics.ListCreateAPIView, generics.RetrieveUpdateDestroyAPIView):
-#     queryset = OrderItem.objects.all()
-#     serializer_class = OrderItemSerializer
-
-#     def list(self, request):
-#         data = self.get_queryset()
-#         serializer = self.get_serializer(data, many=True)
-#         return Response({
-#             'message': 'Order items retrieved successfully.',
-#             'data': serializer.data
-#         })
-
-#     def create(self, request):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-#         return Response({
-#             'message': 'Order item created successfully.',
-#             'data': serializer.data
-#         }, status=status.HTTP_201_CREATED)
-
-#     def retrieve(self, request, pk=None):
-#         data = self.get_object()
-#         serializer = self.get_serializer(data)
-#         return Response({
-#             'message': 'Order item retrieved successfully.',
-#             'data': serializer.data
-#         })
-
-#     def update(self, request, pk=None):
-#         data = self.get_object()
-#         serializer = self.get_serializer(data, data=request.data, partial=True)
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-#         return Response({
-#             'message': 'Order item updated successfully.',
-#             'data': serializer.data
-#         })
-
-#     def destroy(self, request, pk=None):
-#         data = self.get_object()
-#         data.delete()
-#         return Response({
-#             'message': 'Order item deleted successfully.'
-#         })
+        if self.request.user.groups.count() == 0:  # Normal user, not belonging to any group = Customer
+            return Response('Not Ok')
+        else:  # everyone else - Super Admin, Manager and Delivery Crew
+            return super().update(request, *args, **kwargs)
 
 
-class ManagersListView(generics.ListCreateAPIView):
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-    queryset = User.objects.filter(groups__name='Manager')
-    serializer_class = ManagerListSerializer
-    permission_classes = [IsAuthenticated, IsManager | IsSuperuser]
+class GroupViewSet(viewsets.ViewSet):
+    permission_classes = [IsAdminUser]
 
-    def post(self, request, *args, **kwargs):
-        username = request.data['username']
-        if username:
-            user = get_object_or_404(User, username=username)
-            managers = Group.objects.get(name='Manager')
-            managers.user_set.add(user)
-            return JsonResponse(status=201, data={'message': 'User added to Managers group'})
+    def list(self, request):
+        users = User.objects.all().filter(groups__name='Manager')
+        items = UserSerilializer(users, many=True)
+        return Response(items.data)
 
+    def create(self, request):
+        user = get_object_or_404(User, username=request.data['username'])
+        managers = Group.objects.get(name="Manager")
+        managers.user_set.add(user)
+        return Response({"message": "user added to the manager group"}, 200)
 
-class ManagersRemoveView(generics.DestroyAPIView):
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-    serializer_class = ManagerListSerializer
-    permission_classes = [IsAuthenticated, IsManager | IsSuperuser]
-    queryset = User.objects.filter(groups__name='Manager')
-
-    def delete(self, request, *args, **kwargs):
-        pk = self.kwargs['pk']
-        user = get_object_or_404(User, pk=pk)
-        managers = Group.objects.get(name='Manager')
+    def destroy(self, request):
+        user = get_object_or_404(User, username=request.data['username'])
+        managers = Group.objects.get(name="Manager")
         managers.user_set.remove(user)
-        return JsonResponse(status=200, data={'message': 'User removed Managers group'})
+        return Response({"message": "user removed from the manager group"}, 200)
 
 
-class DeliveryCrewListView(generics.ListCreateAPIView):
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-    queryset = User.objects.filter(groups__name='Delivery Crew')
-    serializer_class = ManagerListSerializer
-    permission_classes = [IsAuthenticated, IsManager | IsSuperuser]
+class DeliveryCrewViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        username = request.data['username']
-        if username:
-            user = get_object_or_404(User, username=username)
-            crew = Group.objects.get(name='Delivery Crew')
-            crew.user_set.add(user)
-            return JsonResponse(status=201, data={'message': 'User added to Delivery Crew group'})
+    def list(self, request):
+        users = User.objects.all().filter(groups__name='Delivery Crew')
+        items = UserSerilializer(users, many=True)
+        return Response(items.data)
 
+    def create(self, request):
+        # only for super admin and managers
+        if self.request.user.is_superuser == False:
+            if self.request.user.groups.filter(name='Manager').exists() == False:
+                return Response({"message": "forbidden"}, status.HTTP_403_FORBIDDEN)
 
-class DeliveryCrewRemoveView(generics.DestroyAPIView):
-    throttle_classes = [AnonRateThrottle, UserRateThrottle]
-    serializer_class = ManagerListSerializer
-    permission_classes = [IsAuthenticated, IsManager | IsSuperuser]
-    queryset = User.objects.filter(groups__name='Delivery Crew')
+        user = get_object_or_404(User, username=request.data['username'])
+        dc = Group.objects.get(name="Delivery Crew")
+        dc.user_set.add(user)
+        return Response({"message": "user added to the delivery crew group"}, 200)
 
-    def delete(self, request, *args, **kwargs):
-        pk = self.kwargs['pk']
-        user = get_object_or_404(User, pk=pk)
-        managers = Group.objects.get(name='Delivery Crew')
-        managers.user_set.remove(user)
-        return JsonResponse(status=201, data={'message': 'User removed from the Delivery crew group'})
+    def destroy(self, request):
+        # only for super admin and managers
+        if self.request.user.is_superuser == False:
+            if self.request.user.groups.filter(name='Manager').exists() == False:
+                return Response({"message": "forbidden"}, status.HTTP_403_FORBIDDEN)
+        user = get_object_or_404(User, username=request.data['username'])
+        dc = Group.objects.get(name="Delivery Crew")
+        dc.user_set.remove(user)
+        return Response({"message": "user removed from the delivery crew group"}, 200)
